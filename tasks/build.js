@@ -45,28 +45,30 @@ module.exports = function(grunt) {
     grunt.registerMultiTask("phantomizer-manifest-html", "Builds manifest file", function () {
 
         var _ = grunt.util._;
-        var path = require('path')
+        var path = require('path');
         var ph_libutil = require("phantomizer-libutil");
 
-        var meta = ph_libutil.meta;
+        var meta_factory = ph_libutil.meta;
         var html_utils = ph_libutil.html_utils;
-        var meta_manager = new meta( process.cwd() )
 
-        var options = this.options()
-        var in_file = options.in_file
-        var out_file = options.out_file || ""
-        var meta_file = options.meta_file || ""
-        var base_url = options.base_url || "/"
-        var meta_dir = options.meta_dir || ""
-        var manifest_file = options.manifest_file || ""
-        var manifest_meta = options.manifest_meta || ""
-        var manifest_url = options.manifest_url || ""
-        var maninfest_reloader = options.manifest_reloader || ""
-        var paths = options.paths || []
-        var version = options.version || ""+(new Date().getTime())
-        var cache = options.cache || []
-        var network = options.network || []
-        var fallback = options.fallback || []
+        var options = this.options();
+        var in_file = options.in_file;
+        var out_file = options.out_file || "";
+        var meta_file = options.meta_file || "";
+        var base_url = options.base_url || "/";
+        var meta_dir = options.meta_dir || "";
+        var manifest_file = options.manifest_file || "";
+        var manifest_meta = options.manifest_meta || "";
+        var manifest_url = options.manifest_url || "";
+        var maninfest_reloader = options.manifest_reloader || "";
+        var paths = options.paths || [];
+        var version = options.version || ""+(new Date().getTime());
+        var cache = options.cache || [];
+        var network = options.network || [];
+        var fallback = options.fallback || [];
+
+        var meta_manager = new meta_factory( meta_dir )
+
 
         if( meta_manager.is_fresh(meta_file) == false ){
 
