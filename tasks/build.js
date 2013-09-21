@@ -2,6 +2,8 @@
 
 module.exports = function(grunt) {
 
+    var path = require("path")
+
     grunt.registerMultiTask("phantomizer-manifest", "Builds manifest file", function () {
 
         var options = this.options()
@@ -11,7 +13,7 @@ module.exports = function(grunt) {
         var network = options.network || []
         var fallback = options.fallback || []
 
-        var content = ""
+        var content = "";
         /*
          CACHE MANIFEST
          # on peut omettre cette ligne car CACHE: est la section par défaut
@@ -45,13 +47,13 @@ module.exports = function(grunt) {
     grunt.registerMultiTask("phantomizer-manifest-html", "Builds manifest file", function () {
 
         var _ = grunt.util._;
-        var path = require('path');
         var ph_libutil = require("phantomizer-libutil");
 
         var meta_factory = ph_libutil.meta;
         var html_utils = ph_libutil.html_utils;
 
-        var options = this.options();
+        var options = this.options();;
+
         var in_file = options.in_file;
         var out_file = options.out_file || "";
         var meta_file = options.meta_file || "";
@@ -67,17 +69,15 @@ module.exports = function(grunt) {
         var network = options.network || [];
         var fallback = options.fallback || [];
 
-        var meta_manager = new meta_factory( meta_dir )
-
+        var meta_manager = new meta_factory( process.cwd(), meta_dir )
 
         if( meta_manager.is_fresh(meta_file) == false ){
 
             var html_content = grunt.file.read(in_file)
 
             var html_entry = meta_manager.create([])
-            var p_meta_file = find_abs_request(paths, in_file)
-            if( p_meta_file != false ){
-                var p_html_entry = meta_manager.load(meta_dir+p_meta_file)
+            if( meta_manager.has(in_file) ){
+                var p_html_entry = meta_manager.load(in_file)
                 html_entry.load_dependencies(p_html_entry.dependences)
             }
             var appcache_entry = meta_manager.create([])
@@ -86,8 +86,7 @@ module.exports = function(grunt) {
                 cache.push(file_path)
                 var a_file_path = must_find_in_paths(paths, file_path)
                 if( a_file_path != false ){
-                    var meta_file = find_in_paths([meta_dir], file_path+".meta")
-                    if( meta_file != false ){
+                    if( meta_manager.has(meta_file) ){
                         var e = meta_manager.load(meta_file);
                         appcache_entry.load_dependencies(e.dependences)
                         html_entry.load_dependencies(e.dependences)
@@ -151,8 +150,8 @@ module.exports = function(grunt) {
             grunt.log.ok("File created "+out_file)
 
 
-            var current_grunt_task  = this.nameArgs
-            var current_grunt_opt   = this.options()
+            var current_grunt_task  = this.nameArgs;
+            var current_grunt_opt   = this.options();
             // create a cache entry, so that later we can regen or check freshness
             if ( grunt.file.exists(process.cwd()+"/Gruntfile.js")) {
                 appcache_entry.load_dependencies([process.cwd()+"/Gruntfile.js"])
@@ -179,20 +178,18 @@ module.exports = function(grunt) {
     }
 
     function find_in_paths(paths, src){
-        var Path = require("path");
         for( var t in paths ){
             if( grunt.file.exists(paths[t]+src) ){
-                return Path.resolve(paths[t]+src)
+                return path.resolve(paths[t]+src)
             }
         }
         return false
     }
 
     function find_abs_request(paths, src){
-        var Path = require("path");
         for( var t in paths ){
             if( grunt.file.exists(paths[t]+src) ){
-                var f = Path.resolve(paths[t]+src)
+                var f = path.resolve(paths[t]+src)
                 return f.substr(paths[t].length)
             }
         }
