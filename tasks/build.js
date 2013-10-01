@@ -52,7 +52,8 @@ module.exports = function(grunt) {
         var meta_factory = ph_libutil.meta;
         var html_utils = ph_libutil.html_utils;
 
-        var options = this.options();;
+        var options = this.options();
+        var user_config = grunt.config();
 
         var in_file = options.in_file;
         var out_file = options.out_file || "";
@@ -155,6 +156,9 @@ module.exports = function(grunt) {
             // create a cache entry, so that later we can regen or check freshness
             if ( grunt.file.exists(process.cwd()+"/Gruntfile.js")) {
                 appcache_entry.load_dependencies([process.cwd()+"/Gruntfile.js"])
+            }
+            if ( grunt.file.exists(user_config.project_dir+"/../config.json")) {
+                appcache_entry.load_dependencies([user_config.project_dir+"/../config.json"]);
             }
             appcache_entry.load_dependencies([__filename, in_file])
             appcache_entry.require_task(current_grunt_task, current_grunt_opt)
