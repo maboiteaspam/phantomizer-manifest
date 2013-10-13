@@ -1,22 +1,21 @@
 {
     "name": "phantomizer-manifest",
-    "version": "0.1.0",
+    "version": "0.1.1",
     "private": true,
     "description": "Manifest injection support for phantomizer",
     "keywords": "",
     "bugs": {
-        "url" : "http://github.com/maboiteaspam/phantomizer-manifest/issues",
-        "email" : "none@host.com"
+        "url": "http://github.com/maboiteaspam/phantomizer-manifest/issues",
+        "email": "none@host.com"
     },
-    "license" : "mit",
-    "repository" :{
-        "type" : "git",
-        "url" : "http://github.com/maboiteaspam/phantomizer-manifest.git"
+    "license": "mit",
+    "repository": {
+        "type": "git",
+        "url": "http://github.com/maboiteaspam/phantomizer-manifest.git"
     },
     "dependencies": {
         "grunt": "0.4.x",
         "phantomizer-libutil": "maboiteaspam/phantomizer-libutil"
     },
-    "devDependencies": {
-    }
+    "devDependencies": {}
 }
