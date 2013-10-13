@@ -44,7 +44,7 @@ module.exports = function(grunt) {
         grunt.file.write(manifest_file,content)
     })
 
-    grunt.registerMultiTask("phantomizer-manifest-html", "Builds manifest file", function () {
+    grunt.registerMultiTask("phantomizer-manifest-html", "Builds manifest file given an html file", function () {
 
         var _ = grunt.util._;
         var ph_libutil = require("phantomizer-libutil");
@@ -70,17 +70,14 @@ module.exports = function(grunt) {
         var network = options.network || [];
         var fallback = options.fallback || [];
 
-        var meta_manager = new meta_factory( process.cwd(), meta_dir )
+        var meta_manager = new meta_factory( process.cwd(), meta_dir );
 
-        if( meta_manager.is_fresh(meta_file) == false ){
+        var current_grunt_task  = this.nameArgs;
+        var html_content = grunt.file.read(in_file);
 
-            var html_content = grunt.file.read(in_file)
+        if( meta_manager.is_fresh(meta_file, current_grunt_task) == false ){
 
-            var html_entry = meta_manager.create([])
-            if( meta_manager.has(in_file) ){
-                var p_html_entry = meta_manager.load(in_file)
-                html_entry.load_dependencies(p_html_entry.dependences)
-            }
+            var html_entry = meta_manager.load(meta_file);
             var appcache_entry = meta_manager.create([])
 
             var push_src_file = function(file_path){
@@ -100,31 +97,43 @@ module.exports = function(grunt) {
 
             var nodes = html_utils.find_link_nodes(html_content, base_url)
             for( var n in nodes ){
-                push_src_file(nodes[n].asrc)
+                if( find_in_paths(paths,nodes[n].asrc) ){
+                    push_src_file(nodes[n].asrc)
+                }
             }
             nodes = html_utils.find_style_nodes(html_content, base_url)
             for( var n in nodes ){
                 var node = nodes[n]
                 for( var k in node.imports ){
-                    push_src_file(node.imports[k].asrc)
+                    if( find_in_paths(paths,node.imports[k].asrc) ){
+                        push_src_file(node.imports[k].asrc)
+                    }
                 }
                 for( var k in node.imgs ){
-                    push_src_file(node.imgs[k].asrc)
+                    if( find_in_paths(paths,node.imgs[k].asrc) ){
+                        push_src_file(node.imgs[k].asrc)
+                    }
                 }
             }
             nodes = html_utils.find_rjs_nodes(html_content, base_url)
             for( var n in nodes ){
-                push_src_file(nodes[n].asrc)
+                if( find_in_paths(paths,nodes[n].asrc) ){
+                    push_src_file(nodes[n].asrc)
+                }s
             }
 
             var nodes = html_utils.find_scripts_nodes(html_content, base_url)
             for( var n in nodes ){
-                push_src_file(nodes[n].asrc)
+                if( find_in_paths(paths,nodes[n].asrc) ){
+                    push_src_file(nodes[n].asrc)
+                }
             }
 
             var nodes = html_utils.find_img_nodes(html_content, base_url)
             for( var n in nodes ){
-                push_src_file(nodes[n].asrc)
+                if( find_in_paths(paths,nodes[n].asrc) ){
+                    push_src_file(nodes[n].asrc)
+                }
             }
 
 
@@ -145,7 +154,7 @@ module.exports = function(grunt) {
             grunt.log.ok("File created "+manifest_file)
 
             var reloader = grunt.file.read(maninfest_reloader)
-            html_content = html_content.replace("<body>", "<body><script type='text/javascript'>"+reloader+"</script>")
+            html_content = html_content.replace(/<body([^>]+)?>/gi, "<body$1><script type='text/javascript'>"+reloader+"</script>")
             html_content = html_content.replace("<html", "<html manifest=\""+manifest_url+"\"")
             grunt.file.write(out_file, html_content)
             grunt.log.ok("File created "+out_file)
@@ -167,8 +176,9 @@ module.exports = function(grunt) {
             html_entry.load_dependencies(appcache_entry.dependencies)
             html_entry.require_task(current_grunt_task, current_grunt_opt)
             html_entry.save(meta_file)
+            grunt.log.ok("Manifest done "+manifest_url);
         }else{
-
+            grunt.log.ok("Manifest fresh "+manifest_url);
         }
 
     })
