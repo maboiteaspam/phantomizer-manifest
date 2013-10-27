@@ -33,32 +33,33 @@ module.exports = function(grunt) {
             out_file:'',
 
             meta_file:'',
-            meta_dir:'',
+            meta_dir:'<%= meta_dir %>',
+            project_dir:'<%= project_dir %>',
 
             manifest_file:'',
             manifest_meta:'',
             manifest_url:'',
-            manifest_reloader:'',
+            manifest_reloader:'<%= manifest_reloader %>',
 
             base_url:'/',
-            paths:[],
+            src_paths:'<%= paths %>',
             version:""+(new Date().getTime()),
             cache:[],
             network:[],
             fallback:[]
         });
-        var user_config = grunt.config();
 
         var in_file = options.in_file;
         var out_file = options.out_file;
-        var meta_file = options.meta_file;
-        var base_url = options.base_url;
         var meta_dir = options.meta_dir;
+        var meta_file = options.meta_file;
+        var project_dir = options.project_dir;
+        var base_url = options.base_url;
         var manifest_file = options.manifest_file;
         var manifest_meta = options.manifest_meta;
         var manifest_url = options.manifest_url;
         var maninfest_reloader = options.manifest_reloader;
-        var paths = options.paths;
+        var paths = options.src_paths;
         var version = options.version;
         var cache = options.cache;
         var network = options.network;
@@ -112,7 +113,7 @@ module.exports = function(grunt) {
 // create AppCache meta
             appcache_entry.load_dependencies([
                 process.cwd()+"/Gruntfile.js",
-                user_config.project_dir+"/../config.json",
+                project_dir+"/../config.json",
                 __filename,
                 in_file])
             appcache_entry.require_task(current_grunt_task, current_grunt_opt)
