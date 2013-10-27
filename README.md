@@ -15,9 +15,9 @@ http://github.com/maboiteaspam/phantomizer
 
 ```javascript
 {
-  'phantomizer-manifest': { // Task
-    "phantomizer-manifest": {              // Target
-      options: {            // Target options
+  'phantomizer-manifest': {     // Task
+    "arbitrary": {              // Target
+      options: {                // Target options
             manifest_file:"",
             version:"",
             cache:[],
@@ -25,26 +25,28 @@ http://github.com/maboiteaspam/phantomizer
             fallback:[]
       }
     },
-    "phantomizer-manifest-html": {              // Target
-      options: {            // Target options
-            in_file:'',
-            out_file:'',
+    'phantomizer-html-manifest':{   // Task
+        "html-file": {              // Target
+          options: {                // Target options
+                in_file:'',
+                out_file:'',
 
-            meta_file:'',
-            meta_dir:'',
+                meta_file:'',
+                meta_dir:'',
 
-            manifest_file:'',
-            manifest_meta:'',
-            manifest_url:'',
-            manifest_reloader:'',
+                manifest_file:'',
+                manifest_meta:'',
+                manifest_url:'',
+                manifest_reloader:'',
 
-            base_url:'/',
-            paths:[],
-            version:"",
-            cache:[],
-            network:[],
-            fallback:[]
-      }
+                base_url:'/',
+                paths:[],
+                version:"",
+                cache:[],
+                network:[],
+                fallback:[]
+          }
+        }
     }
   }
 }
