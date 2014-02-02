@@ -200,6 +200,7 @@ module.exports = function(grunt) {
                 }
 
 
+
                 var reloader = "";
                 if( options.maninfest_reloader ){
                     if( grunt.file.exists(options.maninfest_reloader) ){
@@ -231,6 +232,7 @@ module.exports = function(grunt) {
                             cache,options.network,options.fallback);
                         grunt.file.write(manifest_file, manifest_content);
 
+                        var html_content = grunt.file.read(html_file);
 // load appcache and manifest reloader within html content
                         var manifest_url = manifest_file.replace(options.target_path,"");
                         manifest_url = manifest_url.substr(0,1)=="/"?manifest_url:"/"+manifest_url;
@@ -268,14 +270,10 @@ module.exports = function(grunt) {
                             }
                         }
 
-// generate and write AppCache file
-                        var manifest_content = generate_appcache_content(options.version,
-                            cache,options.network,options.fallback);
-                        grunt.file.write(manifest_file, manifest_content);
-
+                        var html_content = grunt.file.read(html_file);
 // load appcache and manifest reloader within html content
                         html_content = html_content.replace("<html",
-                            "<html manifest=\""+manifest_url+"\"")
+                            "<html manifest=\""+manifest_url+"\"");
 
 // insert appcache reloader
                         if( reloader != "" ){
@@ -284,6 +282,11 @@ module.exports = function(grunt) {
                         }
                         grunt.file.write(html_file, html_content);
                     }
+
+// generate and write AppCache file
+                    var manifest_content = generate_appcache_content(options.version,
+                        cache,options.network,options.fallback);
+                    grunt.file.write(manifest_file, manifest_content);
                 }
 
 
