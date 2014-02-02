@@ -1,47 +1,56 @@
-
 module.exports = function(grunt) {
 
-    var d = __dirname+"/vendors/phantomizer-manifest";
 
-    var out_dir = d+"/demo/out/";
-    var meta_dir = d+"/demo/out/";
+    var wrench = require('wrench'),
+        util = require('util');
 
-
+    // Project configuration.
     grunt.initConfig({
-        pkg: grunt.file.readJSON('package.json')
-
-        ,"out_dir":out_dir
-        ,"meta_dir":meta_dir
-
-        //-
-        ,'phantomizer-manifest': {
-            options: {
-                "out_file":""
-                ,"version":""
-                ,"cache":[
-                    "some/file.css"
-                    ,"some/file.js"
-                ]
-                ,"network":[
-                    "some/file.jpeg"
-                    ,"some/file.png"
-                ]
-                ,"fallback":[
-                    {"ok":"some/file.html", "ko":"some/fallback.html"}
-                    ,{"ok":"some/file.html", "ko":"some/fallback.html"}
-                ]
+        pkg: grunt.file.readJSON('package.json'),
+        docco: {
+            debug: {
+                src: [
+                    'tasks/build.js'
+                ],
+                options: {
+                    layout:'linear',
+                    output: 'documentation/'
+                }
             }
-            ,test: {
-                options:{
+        },
+        'gh-pages': {
+            options: {
+                base: '.',
+                add: true
+            },
+            src: ['documentation/**']
+        },
+        release: {
+            options: {
+                bump: true,
+                add: false,
+                commit: false,
+                npm: false,
+                npmtag: true,
+                tagName: '<%= version %>',
+                github: {
+                    repo: 'maboiteaspam/phantomizer-manifest',
+                    usernameVar: 'GITHUB_USERNAME',
+                    passwordVar: 'GITHUB_PASSWORD'
                 }
             }
         }
     });
+    grunt.loadNpmTasks('grunt-docco');
+    grunt.loadNpmTasks('grunt-gh-pages');
+    grunt.loadNpmTasks('grunt-release');
+    grunt.loadTasks('tasks');
 
-    grunt.loadNpmTasks('phantomizer-manifest');
+    grunt.registerTask('cleanup-grunt-temp', [],function(){
+        wrench.rmdirSyncRecursive(__dirname + '/.grunt', !true);
+        wrench.rmdirSyncRecursive(__dirname + '/documentation', !true);
+    });
+    grunt.registerTask('default', ['docco','gh-pages', 'cleanup-grunt-temp']);
+    grunt.registerTask('sitemap', ['phantomizer-sitemap']);
 
-    grunt.registerTask('default',
-        [
-            'phantomizer-manifest:test'
-        ]);
 };
