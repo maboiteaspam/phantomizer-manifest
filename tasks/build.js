@@ -4,7 +4,8 @@ module.exports = function(grunt) {
 
     var path = require("path")
 
-// task to generate arbritrary AppCache file
+// Generate a config predefined AppCache file
+// ---------
     grunt.registerMultiTask("phantomizer-manifest", "Builds manifest file", function () {
 
         var options = this.options({
@@ -21,8 +22,10 @@ module.exports = function(grunt) {
 
 
 
-// Task to build AppCache manifest given an html file
-    grunt.registerMultiTask("phantomizer-manifest-html", "Builds manifest file given an html file", function () {
+// Generate an AppCache file and insert it into the DOM
+// ---------
+    grunt.registerMultiTask("phantomizer-manifest-html",
+        "Builds manifest file given an html file", function () {
 
         var ph_libutil = require("phantomizer-libutil");
         var _ = grunt.util._;
@@ -131,66 +134,170 @@ module.exports = function(grunt) {
         }
 
 
-// look up for absolute url of assets within html content
-        function lookup_for_assets(html_content, base_url, paths){
-
-            var html_utils = ph_libutil.html_utils;
-
-            var retour = [];
-
-// look up for <link> nodes
-            var nodes = html_utils.find_link_nodes(html_content, base_url)
-            for( var n in nodes ){
-                if( find_in_paths(paths,nodes[n].asrc) ){
-                    retour.push(nodes[n].asrc)
-                }
-            }
-
-// look up for css / img imports within <styles> nodes
-            nodes = html_utils.find_style_nodes(html_content, base_url)
-            for( var n in nodes ){
-                var node = nodes[n]
-                for( var k in node.imports ){
-                    if( find_in_paths(paths,node.imports[k].asrc) ){
-                        retour.push(node.imports[k].asrc)
-                    }
-                }
-                for( var k in node.imgs ){
-                    if( find_in_paths(paths,node.imgs[k].asrc) ){
-                        retour.push(node.imgs[k].asrc)
-                    }
-                }
-            }
-
-
-// look up for <script data-main> nodes
-            nodes = html_utils.find_rjs_nodes(html_content, base_url)
-            for( var n in nodes ){
-                if( find_in_paths(paths,nodes[n].asrc) ){
-                    retour.push(nodes[n].asrc)
-                }s
-            }
-
-// look up for <script> nodes
-            var nodes = html_utils.find_scripts_nodes(html_content, base_url)
-            for( var n in nodes ){
-                if( find_in_paths(paths,nodes[n].asrc) ){
-                    retour.push(nodes[n].asrc)
-                }
-            }
-
-// look up for <img> nodes
-            var nodes = html_utils.find_img_nodes(html_content, base_url)
-            for( var n in nodes ){
-                if( find_in_paths(paths,nodes[n].asrc) ){
-                    retour.push(nodes[n].asrc)
-                }
-            }
-            return retour;
-        }
-
     });
 
+
+
+// Generate an AppCache file and insert it into the DOM
+// ---------
+    //-
+    var ph_libutil  = require("phantomizer-libutil");
+    var fs          = require("fs");
+
+    var router_factory    = ph_libutil.router;
+    grunt.registerMultiTask("phantomizer-project-manifest",
+        "Builds manifest files for an entire phantomizer project", function () {
+
+            var options = this.options({
+                target_path:"export/",
+                appcache_extension:".appcache",
+                base_url:"/",
+                // one_for_all|one_for_each
+                mode:"one_for_all",
+                min_occurence_count:2,
+
+                manifest_reloader:'<%= manifest_reloader %>',
+
+                version:""+(new Date().getTime()),
+                cache:[],
+                network:[],
+                fallback:[]
+            });
+            var config = grunt.config();
+
+            var router = new router_factory(config.routing);
+            router.load(function(){
+
+                var urls = router.collect_urls();
+
+
+//
+                var pages = {};
+                var assets = {};
+                for( var n in urls ){
+                    var url = urls[n];
+                    var in_file = options.target_path + url;
+                    if( grunt.file.exists( in_file ) ){
+                        var html_content = grunt.file.read(in_file);
+                        var page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
+                        for(var t in page_assets ){
+                            var page_asset = page_assets[t];
+                            if( !assets[page_asset] ){
+                                assets[page_asset] = {
+                                    ocurence_count:0,
+                                    ocurence_urls:[]
+                                }
+                            }
+                            assets[page_asset].ocurence_count++;
+                            assets[page_asset].ocurence_urls.push(url);
+                        }
+
+                        pages[url] = {
+                            file:in_file,
+                            assets:page_assets
+                        };
+                    }
+                }
+
+
+                var reloader = "";
+                if( options.maninfest_reloader ){
+                    if( grunt.file.exists(options.maninfest_reloader) ){
+                        reloader = grunt.file.read(options.maninfest_reloader);
+                    }else if( options.maninfest_reloader != "" ){
+                        reloader = options.maninfest_reloader;
+                    }
+                }
+
+
+//
+                if( options.mode == "one_for_each" ){
+                    for( var page_url in pages ){
+                        var page_assets = pages[page_url].assets;
+                        var html_file = pages[page_url].file;
+
+//
+                        var cache = [];
+                        for( var n in options.cache ){
+                            cache.push(options.cache[n]);
+                        }
+                        for( var n in page_assets ){
+                            cache.push(page_assets[n]);
+                        }
+
+// generate and write AppCache file
+                        var manifest_file = html_file.replace(/[.](htm|html)$/,options.appcache_extension);
+                        var manifest_content = generate_appcache_content(options.version,
+                            cache,options.network,options.fallback);
+                        grunt.file.write(manifest_file, manifest_content);
+
+// load appcache and manifest reloader within html content
+                        var manifest_url = manifest_file.replace(options.target_path,"");
+                        manifest_url = manifest_url.substr(0,1)=="/"?manifest_url:"/"+manifest_url;
+                        html_content = html_content.replace("<html",
+                            "<html manifest=\""+manifest_url+"\"")
+
+// insert appcache reloader
+                        if( reloader != "" ){
+                            html_content = html_content.replace(/<body([^>]+)?>/gi,
+                                "<body$1><script type='text/javascript'>"+reloader+"</script>");
+                        }
+                        grunt.file.write(html_file, html_content);
+                    }
+                }
+
+//
+                if( options.mode == "one_for_all" ){
+
+                    var manifest_url = "/manifest"+options.appcache_extension;
+                    var manifest_file = options.target_path+manifest_url;
+
+                    for( var page_url in pages ){
+                        var page_assets = pages[page_url].assets;
+                        var html_file = pages[page_url].file;
+
+//
+                        var cache = [];
+                        for( var n in options.cache ){
+                            cache.push(options.cache[n]);
+                        }
+                        for( var n in page_assets ){
+                            var page_asset = page_assets[n];
+                            if( assets[page_asset].ocurence_urls.length >= options.min_occurence_count ){
+                                cache.push(page_asset);
+                            }
+                        }
+
+// generate and write AppCache file
+                        var manifest_content = generate_appcache_content(options.version,
+                            cache,options.network,options.fallback);
+                        grunt.file.write(manifest_file, manifest_content);
+
+// load appcache and manifest reloader within html content
+                        html_content = html_content.replace("<html",
+                            "<html manifest=\""+manifest_url+"\"")
+
+// insert appcache reloader
+                        if( reloader != "" ){
+                            html_content = html_content.replace(/<body([^>]+)?>/gi,
+                                "<body$1><script type='text/javascript'>"+reloader+"</script>");
+                        }
+                        grunt.file.write(html_file, html_content);
+                    }
+                }
+
+
+
+            })
+            grunt.log.ok();
+        });
+
+
+
+
+
+// helpers function
+// ---------
     function generate_appcache_content(version,cache,network,fallback){
         var content = "";
         content += "CACHE MANIFEST" + "\n"
@@ -224,13 +331,62 @@ module.exports = function(grunt) {
         return false
     }
 
-    function find_abs_request(paths, src){
-        for( var t in paths ){
-            if( grunt.file.exists(paths[t]+src) ){
-                var f = path.resolve(paths[t]+src)
-                return f.substr(paths[t].length)
+// look up for absolute url of assets within html content
+    function lookup_for_assets(html_content, base_url, paths){
+
+        var html_utils = ph_libutil.html_utils;
+
+        var retour = [];
+
+// look up for <link> nodes
+        var nodes = html_utils.find_link_nodes(html_content, base_url)
+        for( var n in nodes ){
+            if( find_in_paths(paths,nodes[n].asrc) ){
+                retour.push(nodes[n].asrc)
             }
         }
-        return false
+
+// look up for css / img imports within <styles> nodes
+        nodes = html_utils.find_style_nodes(html_content, base_url)
+        for( var n in nodes ){
+            var node = nodes[n]
+            for( var k in node.imports ){
+                if( find_in_paths(paths,node.imports[k].asrc) ){
+                    retour.push(node.imports[k].asrc)
+                }
+            }
+            for( var k in node.imgs ){
+                if( find_in_paths(paths,node.imgs[k].asrc) ){
+                    retour.push(node.imgs[k].asrc)
+                }
+            }
+        }
+
+
+// look up for <script data-main> nodes
+        nodes = html_utils.find_rjs_nodes(html_content, base_url)
+        for( var n in nodes ){
+            if( find_in_paths(paths,nodes[n].asrc) ){
+                retour.push(nodes[n].asrc)
+            }s
+        }
+
+// look up for <script> nodes
+        nodes = html_utils.find_scripts_nodes(html_content, base_url)
+        for( var n in nodes ){
+            if( find_in_paths(paths,nodes[n].asrc) ){
+                retour.push(nodes[n].asrc)
+            }
+        }
+
+// look up for <img> nodes
+        nodes = html_utils.find_img_nodes(html_content, base_url)
+        for( var n in nodes ){
+            if( find_in_paths(paths,nodes[n].asrc) ){
+                retour.push(nodes[n].asrc)
+            }
+        }
+        return retour;
     }
+
 };
