@@ -168,7 +168,16 @@ module.exports = function(grunt) {
       var router = new router_factory(config.routing);
       router.load(function(){
 
-        var urls = router.collect_urls();
+        // fetch urls to build
+        var not_added = [];
+        var urls = router.collect_urls(function(route){
+          if( route.export == false ){
+            not_added.push(route);
+            return false;
+          }
+          return true;
+        });
+        grunt.log.ok("URL to export: "+urls.length+"/"+(urls.length+not_added.length));
 
 
 //
