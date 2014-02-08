@@ -2,7 +2,8 @@
 
 module.exports = function(grunt) {
 
-  var path = require("path")
+  var path = require("path");
+  var progress = require("progress");
 
 // Generate a config predefined AppCache file
 // ---------
@@ -163,9 +164,10 @@ module.exports = function(grunt) {
         network:[],
         fallback:[]
       });
-      var config = grunt.config();
 
+      var config = grunt.config();
       var router = new router_factory(config.routing);
+      var done = this.async();
       router.load(function(){
 
         // fetch urls to build
@@ -179,6 +181,14 @@ module.exports = function(grunt) {
         });
         grunt.log.ok("URL to export: "+urls.length+"/"+(urls.length+not_added.length));
 
+
+// initialize a progress bar
+        var bar = new progress(' done=[:current/:total] elapsed=[:elapseds] sprint=[:percent] eta=[:etas] [:bar]', {
+          complete: '#'
+          , incomplete: '-'
+          , width: 80
+          , total: (urls.length*2)
+        });
 
 //
         var pages = {};
@@ -205,6 +215,8 @@ module.exports = function(grunt) {
               file:in_file,
               assets:page_assets
             };
+
+            bar.tick();
           }
         }
 
@@ -254,6 +266,7 @@ module.exports = function(grunt) {
                 "<body$1><script type='text/javascript'>"+reloader+"</script>");
             }
             grunt.file.write(html_file, html_content);
+            bar.tick();
           }
         }
 
@@ -290,6 +303,7 @@ module.exports = function(grunt) {
                 "<body$1><script type='text/javascript'>"+reloader+"</script>");
             }
             grunt.file.write(html_file, html_content);
+            bar.tick();
           }
 
 // generate and write AppCache file
@@ -299,9 +313,9 @@ module.exports = function(grunt) {
         }
 
 
-
-      })
-      grunt.log.ok();
+        grunt.log.ok();
+        done();
+      });
     });
 
 
