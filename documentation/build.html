@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+
+<html>
+<head>
+  <title>build.js</title>
+  <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+  <link rel="stylesheet" media="all" href="public/stylesheets/normalize.css" />
+  <link rel="stylesheet" media="all" href="docco.css" />
+</head>
+<body>
+  <div class="container">
+    <div class="page">
+
+      <div class="header">
+        
+          <h1>build.js</h1>
+        
+
+        
+      </div>
+
+      
+        
+        
+        
+          <div class='highlight'><pre><span class="hljs-pi">'use strict'</span>;
+
+module.exports = <span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(grunt)</span> {</span>
+
+  <span class="hljs-keyword">var</span> path = <span class="hljs-built_in">require</span>(<span class="hljs-string">"path"</span>);
+  <span class="hljs-keyword">var</span> progress = <span class="hljs-built_in">require</span>(<span class="hljs-string">"progress"</span>);
+  <span class="hljs-keyword">var</span> ph_libutil = <span class="hljs-built_in">require</span>(<span class="hljs-string">"phantomizer-libutil"</span>);</pre></div>
+        
+      
+        
+        <h2 id="generate-a-config-predefined-appcache-file">Generate a config predefined AppCache file</h2>
+
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>  grunt.registerMultiTask(<span class="hljs-string">"phantomizer-manifest"</span>, <span class="hljs-string">"Builds manifest file"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> {</span>
+
+    <span class="hljs-keyword">var</span> options = <span class="hljs-keyword">this</span>.options({
+      manifest_file:<span class="hljs-string">""</span>,
+      version:(<span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().getTime()),
+      cache:[],
+      network:[],
+      fallback:[]
+    })
+    <span class="hljs-keyword">var</span> content = generate_appcache_content(options.version,options.cache,options.network,options.fallback);
+    grunt.file.write(options.manifest_file,content)
+    grunt.log.ok(<span class="hljs-string">"AppCache file wrote "</span>+manifest_file)
+  });</pre></div>
+        
+      
+        
+        <h2 id="generate-an-appcache-file-and-insert-it-into-the-dom">Generate an AppCache file and insert it into the DOM</h2>
+
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>  grunt.registerMultiTask(<span class="hljs-string">"phantomizer-manifest-html"</span>,
+    <span class="hljs-string">"Builds manifest file given an html file"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> {</span>
+
+      <span class="hljs-keyword">var</span> options = <span class="hljs-keyword">this</span>.options({
+        in_file:<span class="hljs-string">''</span>,
+        out_file:<span class="hljs-string">''</span>,
+
+        meta_file:<span class="hljs-string">''</span>,
+        project_dir:<span class="hljs-string">'&lt;%= project_dir %&gt;'</span>,
+
+        manifest_file:<span class="hljs-string">''</span>,
+        manifest_meta:<span class="hljs-string">''</span>,
+        manifest_url:<span class="hljs-string">''</span>,
+        manifest_reloader:<span class="hljs-string">'&lt;%= manifest_reloader %&gt;'</span>,
+
+        base_url:<span class="hljs-string">'/'</span>,
+        src_paths:<span class="hljs-string">'&lt;%= paths %&gt;'</span>,
+        version:<span class="hljs-string">""</span>+(<span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().getTime()),
+        cache:[],
+        network:[],
+        fallback:[]
+      });
+
+      <span class="hljs-keyword">var</span> in_file = options.in_file;
+      <span class="hljs-keyword">var</span> out_file = options.out_file;
+      <span class="hljs-keyword">var</span> meta_file = options.meta_file;
+      <span class="hljs-keyword">var</span> project_dir = options.project_dir;
+      <span class="hljs-keyword">var</span> base_url = options.base_url;
+      <span class="hljs-keyword">var</span> manifest_file = options.manifest_file;
+      <span class="hljs-keyword">var</span> manifest_meta = options.manifest_meta;
+      <span class="hljs-keyword">var</span> manifest_url = options.manifest_url;
+      <span class="hljs-keyword">var</span> maninfest_reloader = options.manifest_reloader;
+      <span class="hljs-keyword">var</span> paths = options.src_paths;
+      <span class="hljs-keyword">var</span> version = options.version;
+      <span class="hljs-keyword">var</span> cache = options.cache;
+      <span class="hljs-keyword">var</span> network = options.network;
+      <span class="hljs-keyword">var</span> fallback = options.fallback;
+
+      <span class="hljs-keyword">var</span> phantomizer = ph_libutil.get(<span class="hljs-string">"main"</span>);
+      <span class="hljs-keyword">var</span> meta_manager = phantomizer.get_meta_manager();
+
+      <span class="hljs-keyword">var</span> current_grunt_task  = <span class="hljs-keyword">this</span>.nameArgs;
+      <span class="hljs-keyword">var</span> current_grunt_opt   = <span class="hljs-keyword">this</span>.options();
+
+
+      <span class="hljs-keyword">if</span>( meta_manager.is_fresh(meta_file, current_grunt_task) == <span class="hljs-literal">false</span> ){
+
+        <span class="hljs-keyword">var</span> html_content = grunt.file.read(in_file);
+
+        <span class="hljs-keyword">var</span> html_entry = meta_manager.load(meta_file);
+        <span class="hljs-keyword">var</span> appcache_entry = meta_manager.create([])</pre></div>
+        
+      
+        
+        <p>lookup for assets within html content</p>
+
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> file_assets = lookup_for_assets(html_content, base_url, paths);</pre></div>
+        
+      
+        
+        <p>dispatch assets into AppCache / HTML, cache dependencies</p>
+
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> file_assets ){
+          <span class="hljs-keyword">var</span> file_path = file_assets[n];
+          cache.push(file_path)
+          <span class="hljs-keyword">var</span> a_file_path = must_find_in_paths(paths, file_path)
+          <span class="hljs-keyword">if</span>( a_file_path != <span class="hljs-literal">false</span> ){
+            <span class="hljs-keyword">if</span>( meta_manager.has(file_path) ){
+              <span class="hljs-keyword">var</span> e = meta_manager.load(file_path);
+              appcache_entry.load_dependencies(e.dependences)
+              html_entry.load_dependencies(e.dependences)
+            }
+            appcache_entry.load_dependencies([a_file_path])
+            html_entry.load_dependencies([a_file_path])
+          }
+        }</pre></div>
+        
+      
+        
+        <p>generate and write AppCache file</p>
+
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> manifest_content = generate_appcache_content(version,cache,network,fallback);
+        grunt.file.write(manifest_file,manifest_content);
+        grunt.log.ok(<span class="hljs-string">"AppCache file wrote "</span>+manifest_file);</pre></div>
+        
+      
+        
+        <p>include appcache and manifest reloader within html content</p>
+
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> reloader = grunt.file.read(maninfest_reloader);
+        html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>, <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>)
+        html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>, <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>)
+        grunt.file.write(out_file, html_content);
+        grunt.log.ok(<span class="hljs-string">"HTML file wrote "</span>+out_file);</pre></div>
+        
+      
+        
+        <p>create AppCache meta</p>
+
+        
+          <div class='highlight'><pre>        appcache_entry.load_dependencies([
+          process.cwd()+<span class="hljs-string">"/Gruntfile.js"</span>,
+          project_dir+<span class="hljs-string">"/../config.json"</span>,
+          __filename,
+          in_file])
+        appcache_entry.require_task(current_grunt_task, current_grunt_opt)
+        appcache_entry.save(manifest_meta)</pre></div>
+        
+      
+        
+        <p>create HTML meta</p>
+
+        
+          <div class='highlight'><pre>        html_entry.load_dependencies(appcache_entry.dependencies)
+        html_entry.require_task(current_grunt_task, current_grunt_opt)
+        html_entry.save(meta_file)
+
+        grunt.log.ok(<span class="hljs-string">"Manifest done "</span>+manifest_url);
+
+      }<span class="hljs-keyword">else</span>{
+        grunt.log.ok(<span class="hljs-string">"Manifest fresh "</span>+manifest_url);
+      }
+
+
+    });</pre></div>
+        
+      
+        
+        <h2 id="generate-an-appcache-file-and-insert-it-into-the-dom">Generate an AppCache file and insert it into the DOM</h2>
+
+        
+      
+        
+        <p>-</p>
+
+        
+          <div class='highlight'><pre>  <span class="hljs-keyword">var</span> fs = <span class="hljs-built_in">require</span>(<span class="hljs-string">"fs"</span>);
+
+  grunt.registerMultiTask(<span class="hljs-string">"phantomizer-project-manifest"</span>,
+    <span class="hljs-string">"Builds manifest files for an entire phantomizer project"</span>, <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-params">()</span> {</span>
+
+      <span class="hljs-keyword">var</span> options = <span class="hljs-keyword">this</span>.options({
+        target_path:<span class="hljs-string">"export/"</span>,
+        appcache_extension:<span class="hljs-string">".appcache"</span>,
+        base_url:<span class="hljs-string">"/"</span>,</pre></div>
+        
+      
+        
+        <p>one_for_all|one_for_each</p>
+
+        
+          <div class='highlight'><pre>        mode:<span class="hljs-string">"one_for_all"</span>,
+        min_occurence_count:<span class="hljs-number">2</span>,
+
+        manifest_reloader:<span class="hljs-string">'&lt;%= manifest_reloader %&gt;'</span>,
+
+        version:<span class="hljs-string">""</span>+(<span class="hljs-keyword">new</span> <span class="hljs-built_in">Date</span>().getTime()),
+        cache:[],
+        network:[],
+        fallback:[]
+      });
+
+      <span class="hljs-keyword">var</span> done = <span class="hljs-keyword">this</span>.async();
+
+      <span class="hljs-keyword">var</span> phantomizer = ph_libutil.get(<span class="hljs-string">"main"</span>);
+      <span class="hljs-keyword">var</span> router = phantomizer.get_router();
+
+      router.load(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span>{</span></pre></div>
+        
+      
+        
+        <p>fetch urls to build</p>
+
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> not_added = [];
+        <span class="hljs-keyword">var</span> urls = router.collect_urls(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">(route)</span>{</span>
+          <span class="hljs-keyword">if</span>( route.export == <span class="hljs-literal">false</span> ){
+            not_added.push(route);
+            <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>;
+          }
+          <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
+        });
+        grunt.log.ok(<span class="hljs-string">"URL to export: "</span>+urls.length+<span class="hljs-string">"/"</span>+(urls.length+not_added.length));</pre></div>
+        
+      
+        
+        <p>initialize a progress bar</p>
+
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> bar = <span class="hljs-keyword">new</span> progress(<span class="hljs-string">' done=[:current/:total] elapsed=[:elapseds] sprint=[:percent] eta=[:etas] [:bar]'</span>, {
+          complete: <span class="hljs-string">'#'</span>
+          , incomplete: <span class="hljs-string">'-'</span>
+          , width: <span class="hljs-number">80</span>
+          , total: (urls.length*<span class="hljs-number">2</span>)
+        });</pre></div>
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> pages = {};
+        <span class="hljs-keyword">var</span> assets = {};
+        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> urls ){
+          <span class="hljs-keyword">var</span> url = urls[n];
+          <span class="hljs-keyword">var</span> in_file = options.target_path + url;
+          <span class="hljs-keyword">if</span>( grunt.file.exists( in_file ) ){
+            <span class="hljs-keyword">var</span> html_content = grunt.file.read(in_file);
+            <span class="hljs-keyword">var</span> page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
+            <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> t <span class="hljs-keyword">in</span> page_assets ){
+              <span class="hljs-keyword">var</span> page_asset = page_assets[t];
+              <span class="hljs-keyword">if</span>( !assets[page_asset] ){
+                assets[page_asset] = {
+                  ocurence_count:<span class="hljs-number">0</span>,
+                  ocurence_urls:[]
+                }
+              }
+              assets[page_asset].ocurence_count++;
+              assets[page_asset].ocurence_urls.push(url);
+            }
+
+            pages[url] = {
+              file:in_file,
+              assets:page_assets
+            };
+
+            bar.tick();
+          }
+        }
+
+
+
+        <span class="hljs-keyword">var</span> reloader = <span class="hljs-string">""</span>;
+        <span class="hljs-keyword">if</span>( options.maninfest_reloader ){
+          <span class="hljs-keyword">if</span>( grunt.file.exists(options.maninfest_reloader) ){
+            reloader = grunt.file.read(options.maninfest_reloader);
+          }<span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>( options.maninfest_reloader != <span class="hljs-string">""</span> ){
+            reloader = options.maninfest_reloader;
+          }
+        }</pre></div>
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">if</span>( options.mode == <span class="hljs-string">"one_for_each"</span> ){
+          <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> page_url <span class="hljs-keyword">in</span> pages ){
+            <span class="hljs-keyword">var</span> page_assets = pages[page_url].assets;
+            <span class="hljs-keyword">var</span> html_file = pages[page_url].file;</pre></div>
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> cache = [];
+            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> options.cache ){
+              cache.push(options.cache[n]);
+            }
+            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> page_assets ){
+              cache.push(page_assets[n]);
+            }</pre></div>
+        
+      
+        
+        <p>generate and write AppCache file</p>
+
+        
+          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> manifest_file = html_file.replace(<span class="hljs-regexp">/[.](htm|html)$/</span>,options.appcache_extension);
+            <span class="hljs-keyword">var</span> manifest_content = generate_appcache_content(options.version,
+              cache,options.network,options.fallback);
+            grunt.file.write(manifest_file, manifest_content);
+
+            <span class="hljs-keyword">var</span> html_content = grunt.file.read(html_file);</pre></div>
+        
+      
+        
+        <p>load appcache and manifest reloader within html content</p>
+
+        
+          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> manifest_url = manifest_file.replace(options.target_path,<span class="hljs-string">""</span>);
+            manifest_url = manifest_url.substr(<span class="hljs-number">0</span>,<span class="hljs-number">1</span>)==<span class="hljs-string">"/"</span>?manifest_url:<span class="hljs-string">"/"</span>+manifest_url;
+            html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>,
+              <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>)</pre></div>
+        
+      
+        
+        <p>insert appcache reloader</p>
+
+        
+          <div class='highlight'><pre>            <span class="hljs-keyword">if</span>( reloader != <span class="hljs-string">""</span> ){
+              html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>,
+                <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>);
+            }
+            grunt.file.write(html_file, html_content);
+            bar.tick();
+          }
+        }</pre></div>
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>        <span class="hljs-keyword">if</span>( options.mode == <span class="hljs-string">"one_for_all"</span> ){
+
+          <span class="hljs-keyword">var</span> manifest_url = <span class="hljs-string">"/manifest"</span>+options.appcache_extension;
+          <span class="hljs-keyword">var</span> manifest_file = options.target_path+manifest_url;
+
+          <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> page_url <span class="hljs-keyword">in</span> pages ){
+            <span class="hljs-keyword">var</span> page_assets = pages[page_url].assets;
+            <span class="hljs-keyword">var</span> html_file = pages[page_url].file;</pre></div>
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> cache = [];
+            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> options.cache ){
+              cache.push(options.cache[n]);
+            }
+            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> page_assets ){
+              <span class="hljs-keyword">var</span> page_asset = page_assets[n];
+              <span class="hljs-keyword">if</span>( assets[page_asset].ocurence_urls.length &gt;= options.min_occurence_count ){
+                cache.push(page_asset);
+              }
+            }
+
+            <span class="hljs-keyword">var</span> html_content = grunt.file.read(html_file);</pre></div>
+        
+      
+        
+        <p>load appcache and manifest reloader within html content</p>
+
+        
+          <div class='highlight'><pre>            html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>,
+              <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>);</pre></div>
+        
+      
+        
+        <p>insert appcache reloader</p>
+
+        
+          <div class='highlight'><pre>            <span class="hljs-keyword">if</span>( reloader != <span class="hljs-string">""</span> ){
+              html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>,
+                <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>);
+            }
+            grunt.file.write(html_file, html_content);
+            bar.tick();
+          }</pre></div>
+        
+      
+        
+        <p>generate and write AppCache file</p>
+
+        
+          <div class='highlight'><pre>          <span class="hljs-keyword">var</span> manifest_content = generate_appcache_content(options.version,
+            cache,options.network,options.fallback);
+          grunt.file.write(manifest_file, manifest_content);
+        }
+
+        grunt.log.ok();
+
+        done();
+
+      });
+    });</pre></div>
+        
+      
+        
+        <h2 id="helpers-function">helpers function</h2>
+
+        
+      
+        
+        
+        
+          <div class='highlight'><pre>  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">generate_appcache_content</span><span class="hljs-params">(version,cache,network,fallback)</span>{</span>
+    <span class="hljs-keyword">var</span> content = <span class="hljs-string">""</span>;
+    content += <span class="hljs-string">"CACHE MANIFEST"</span> + <span class="hljs-string">"\n"</span>
+    content += <span class="hljs-string">"# version::"</span> + version + <span class="hljs-string">"\n"</span>
+    content += <span class="hljs-string">"CACHE:"</span> + <span class="hljs-string">"\n"</span>
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> cache )
+      content += cache[n]+ <span class="hljs-string">"\n"</span>
+    content += <span class="hljs-string">"NETWORK:"</span> + <span class="hljs-string">"\n"</span>
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> network )
+      content += network[n]+ <span class="hljs-string">"\n"</span>
+    content += <span class="hljs-string">"FALLBACK:"</span> + <span class="hljs-string">"\n"</span>
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> fallback )
+      content += fallback[n].ok+ <span class="hljs-string">" "</span>+fallback[n].ko + <span class="hljs-string">"\n"</span>;
+
+    <span class="hljs-keyword">return</span> content;
+  }
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">must_find_in_paths</span><span class="hljs-params">(paths, src)</span>{</span>
+    <span class="hljs-keyword">var</span> retour = find_in_paths(paths, src)
+    <span class="hljs-keyword">if</span>( retour == <span class="hljs-literal">false</span> ){
+      grunt.log.error(<span class="hljs-string">"File not found : "</span>+src)
+    }
+    <span class="hljs-keyword">return</span> retour
+  }
+
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">find_in_paths</span><span class="hljs-params">(paths, src)</span>{</span>
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> t <span class="hljs-keyword">in</span> paths ){
+      <span class="hljs-keyword">if</span>( grunt.file.exists(paths[t]+src) ){
+        <span class="hljs-keyword">return</span> path.resolve(paths[t]+src)
+      }
+    }
+    <span class="hljs-keyword">return</span> <span class="hljs-literal">false</span>
+  }</pre></div>
+        
+      
+        
+        <p>look up for absolute url of assets within html content</p>
+
+        
+          <div class='highlight'><pre>  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">lookup_for_assets</span><span class="hljs-params">(html_content, base_url, paths)</span>{</span>
+
+    <span class="hljs-keyword">var</span> html_utils = ph_libutil.html_utils;
+
+    <span class="hljs-keyword">var</span> retour = [];</pre></div>
+        
+      
+        
+        <p>look up for <link> nodes</p>
+
+        
+          <div class='highlight'><pre>    <span class="hljs-keyword">var</span> nodes = html_utils.find_link_nodes(html_content, base_url)
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> nodes ){
+      <span class="hljs-keyword">if</span>( find_in_paths(paths,nodes[n].asrc) ){
+        retour.push(nodes[n].asrc)
+      }
+    }</pre></div>
+        
+      
+        
+        <p>look up for css / img imports within <styles> nodes</p>
+
+        
+          <div class='highlight'><pre>    nodes = html_utils.find_style_nodes(html_content, base_url)
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> nodes ){
+      <span class="hljs-keyword">var</span> node = nodes[n]
+      <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> k <span class="hljs-keyword">in</span> node.imports ){
+        <span class="hljs-keyword">if</span>( find_in_paths(paths,node.imports[k].asrc) ){
+          retour.push(node.imports[k].asrc)
+        }
+      }
+      <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> k <span class="hljs-keyword">in</span> node.imgs ){
+        <span class="hljs-keyword">if</span>( find_in_paths(paths,node.imgs[k].asrc) ){
+          retour.push(node.imgs[k].asrc)
+        }
+      }
+    }</pre></div>
+        
+      
+        
+        <p>look up for <script data-main> nodes</p>
+
+        
+          <div class='highlight'><pre>    nodes = html_utils.find_rjs_nodes(html_content, base_url)
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> nodes ){
+      <span class="hljs-keyword">if</span>( find_in_paths(paths,nodes[n].asrc) ){
+        retour.push(nodes[n].asrc)
+      }s
+    }</pre></div>
+        
+      
+        
+        <p>look up for <script> nodes</p>
+
+        
+          <div class='highlight'><pre>    nodes = html_utils.find_scripts_nodes(html_content, base_url)
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> nodes ){
+      <span class="hljs-keyword">if</span>( find_in_paths(paths,nodes[n].asrc) ){
+        retour.push(nodes[n].asrc)
+      }
+    }</pre></div>
+        
+      
+        
+        <p>look up for <img> nodes</p>
+
+        
+          <div class='highlight'><pre>    nodes = html_utils.find_img_nodes(html_content, base_url)
+    <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> nodes ){
+      <span class="hljs-keyword">if</span>( find_in_paths(paths,nodes[n].asrc) ){
+        retour.push(nodes[n].asrc)
+      }
+    }
+    <span class="hljs-keyword">return</span> retour;
+  }
+
+};</pre></div>
+        
+      
+      <div class="fleur">h</div>
+    </div>
+  </div>
+</body>
+</html>
