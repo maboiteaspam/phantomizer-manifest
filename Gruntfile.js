@@ -27,12 +27,10 @@ module.exports = function(grunt) {
     },
     release: {
       options: {
-        bump: true,
-        add: false,
-        commit: false,
-        npm: false,
-        npmtag: true,
-        tagName: '<%= version %>',
+        npm: false, //default: true
+        // true will apply the version number as the tag
+        npmtag: true, //default: no tag
+        tagName: '<%= version %>', //default: '<%= version %>'
         github: {
           repo: 'maboiteaspam/phantomizer-manifest',
           usernameVar: 'GITHUB_USERNAME',
@@ -51,6 +49,5 @@ module.exports = function(grunt) {
     wrench.rmdirSyncRecursive(__dirname + '/documentation', !true);
   });
   grunt.registerTask('default', ['docco','gh-pages', 'cleanup-grunt-temp']);
-  grunt.registerTask('sitemap', ['phantomizer-sitemap']);
 
 };
