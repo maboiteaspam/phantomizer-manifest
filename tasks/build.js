@@ -64,7 +64,8 @@ module.exports = function(grunt) {
       var network = options.network;
       var fallback = options.fallback;
 
-      var phantomizer = ph_libutil.get("main");
+      var Phantomizer = ph_libutil.Phantomizer;
+      var phantomizer = new Phantomizer(process.cwd(),grunt);
       var meta_manager = phantomizer.get_meta_manager();
 
       var current_grunt_task  = this.nameArgs;
@@ -161,7 +162,8 @@ module.exports = function(grunt) {
 
       var done = this.async();
 
-      var phantomizer = ph_libutil.get("main");
+      var Phantomizer = ph_libutil.Phantomizer;
+      var phantomizer = new Phantomizer(process.cwd(),grunt);
       var router = phantomizer.get_router();
 
       router.load(function(){
