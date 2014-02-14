@@ -32,7 +32,6 @@ http://github.com/maboiteaspam/phantomizer
                 out_file:'',
 
                 meta_file:'',
-                meta_dir:'',
 
                 manifest_file:'',
                 manifest_meta:'',

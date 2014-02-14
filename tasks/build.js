@@ -4,6 +4,7 @@ module.exports = function(grunt) {
 
   var path = require("path");
   var progress = require("progress");
+  var ph_libutil = require("phantomizer-libutil");
 
 // Generate a config predefined AppCache file
 // ---------
@@ -28,16 +29,11 @@ module.exports = function(grunt) {
   grunt.registerMultiTask("phantomizer-manifest-html",
     "Builds manifest file given an html file", function () {
 
-      var ph_libutil = require("phantomizer-libutil");
-      var _ = grunt.util._;
-      var meta_factory = ph_libutil.meta;
-
       var options = this.options({
         in_file:'',
         out_file:'',
 
         meta_file:'',
-        meta_dir:'<%= meta_dir %>',
         project_dir:'<%= project_dir %>',
 
         manifest_file:'',
@@ -55,7 +51,6 @@ module.exports = function(grunt) {
 
       var in_file = options.in_file;
       var out_file = options.out_file;
-      var meta_dir = options.meta_dir;
       var meta_file = options.meta_file;
       var project_dir = options.project_dir;
       var base_url = options.base_url;
@@ -69,7 +64,8 @@ module.exports = function(grunt) {
       var network = options.network;
       var fallback = options.fallback;
 
-      var meta_manager = new meta_factory( process.cwd(), meta_dir );
+      var phantomizer = ph_libutil.get("main");
+      var meta_manager = phantomizer.get_meta_manager();
 
       var current_grunt_task  = this.nameArgs;
       var current_grunt_opt   = this.options();
@@ -142,10 +138,8 @@ module.exports = function(grunt) {
 // Generate an AppCache file and insert it into the DOM
 // ---------
   //-
-  var ph_libutil  = require("phantomizer-libutil");
-  var fs          = require("fs");
+  var fs = require("fs");
 
-  var router_factory    = ph_libutil.router;
   grunt.registerMultiTask("phantomizer-project-manifest",
     "Builds manifest files for an entire phantomizer project", function () {
 
@@ -165,9 +159,11 @@ module.exports = function(grunt) {
         fallback:[]
       });
 
-      var config = grunt.config();
-      var router = new router_factory(config.routing);
       var done = this.async();
+
+      var phantomizer = ph_libutil.get("main");
+      var router = phantomizer.get_router();
+
       router.load(function(){
 
         // fetch urls to build
@@ -312,9 +308,10 @@ module.exports = function(grunt) {
           grunt.file.write(manifest_file, manifest_content);
         }
 
-
         grunt.log.ok();
+
         done();
+
       });
     });
 
