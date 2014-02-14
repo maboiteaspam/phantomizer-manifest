@@ -1,6 +1,6 @@
 {
   "name": "phantomizer-manifest",
-  "version": "0.1.8",
+  "version": "0.1.9",
   "private": true,
   "description": "Manifest injection support for phantomizer",
   "keywords": "",
