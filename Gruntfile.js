@@ -48,6 +48,6 @@ module.exports = function(grunt) {
     wrench.rmdirSyncRecursive(__dirname + '/.grunt', !true);
     wrench.rmdirSyncRecursive(__dirname + '/documentation', !true);
   });
-  grunt.registerTask('default', ['docco','gh-pages', 'cleanup-grunt-temp']);
+  grunt.registerTask('default', ['release:patch','docco','gh-pages', 'cleanup-grunt-temp']);
 
 };
