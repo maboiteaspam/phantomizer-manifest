@@ -34,7 +34,6 @@ module.exports = function(grunt) {
         out_file:'',
 
         meta_file:'',
-        project_dir:'<%= project_dir %>',
 
         manifest_file:'',
         manifest_meta:'',
@@ -52,12 +51,11 @@ module.exports = function(grunt) {
       var in_file = options.in_file;
       var out_file = options.out_file;
       var meta_file = options.meta_file;
-      var project_dir = options.project_dir;
       var base_url = options.base_url;
       var manifest_file = options.manifest_file;
       var manifest_meta = options.manifest_meta;
       var manifest_url = options.manifest_url;
-      var maninfest_reloader = options.manifest_reloader;
+      var manifest_reloader = options.manifest_reloader;
       var paths = options.src_paths;
       var version = options.version;
       var cache = options.cache;
@@ -104,7 +102,7 @@ module.exports = function(grunt) {
         grunt.log.ok("AppCache file wrote "+manifest_file);
 
 // include appcache and manifest reloader within html content
-        var reloader = grunt.file.read(maninfest_reloader);
+        var reloader = grunt.file.read(manifest_reloader);
         html_content = html_content.replace(/<body([^>]+)?>/gi, "<body$1><script type='text/javascript'>"+reloader+"</script>")
         html_content = html_content.replace("<html", "<html manifest=\""+manifest_url+"\"")
         grunt.file.write(out_file, html_content);
@@ -112,11 +110,7 @@ module.exports = function(grunt) {
 
 
 // create AppCache meta
-        appcache_entry.load_dependencies([
-          process.cwd()+"/Gruntfile.js",
-          project_dir+"/../config.json",
-          __filename,
-          in_file])
+        appcache_entry.load_dependencies([ __filename, in_file])
         appcache_entry.require_task(current_grunt_task, current_grunt_opt)
         appcache_entry.save(manifest_meta)
 
@@ -177,92 +171,77 @@ module.exports = function(grunt) {
           }
           return true;
         });
-        grunt.log.ok("URL to export: "+urls.length+"/"+(urls.length+not_added.length));
+        grunt.log.ok("URL to inject: "+urls.length+"/"+(urls.length+not_added.length));
 
+        var files = grunt.file.expand(
+          {cwd:options.target_path},
+          ['**/*.html','**/*.htm','!js/**','!css/**',]);
 
 // initialize a progress bar
         var bar = new progress(' done=[:current/:total] elapsed=[:elapseds] sprint=[:percent] eta=[:etas] [:bar]', {
           complete: '#'
           , incomplete: '-'
           , width: 80
-          , total: (urls.length*2)
+          , total: (urls.length+files.length)
         });
 
-//
         var pages = {};
         var assets = {};
-        for( var n in urls ){
-          var url = urls[n];
-          var in_file = options.target_path + url;
-          if( grunt.file.exists( in_file ) ){
-            var html_content = grunt.file.read(in_file);
-            var page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
-            for(var t in page_assets ){
-              var page_asset = page_assets[t];
-              if( !assets[page_asset] ){
-                assets[page_asset] = {
-                  ocurence_count:0,
-                  ocurence_urls:[]
-                }
+        for( var n in files ){
+          var url = "/"+files[n];
+          var in_file = options.target_path + files[n];
+          var html_content = grunt.file.read(in_file);
+          var page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
+          for(var t in page_assets ){
+            var page_asset = page_assets[t];
+            if( !assets[page_asset] ){
+              assets[page_asset] = {
+                ocurence_count:0,
+                ocurence_urls:[]
               }
-              assets[page_asset].ocurence_count++;
-              assets[page_asset].ocurence_urls.push(url);
             }
+            assets[page_asset].ocurence_count++;
+            assets[page_asset].ocurence_urls.push(url);
+          }
 
+          if( router.match(url) ){
             pages[url] = {
               file:in_file,
               assets:page_assets
             };
-
-            bar.tick();
           }
-        }
-
-
-
-        var reloader = "";
-        if( options.maninfest_reloader ){
-          if( grunt.file.exists(options.maninfest_reloader) ){
-            reloader = grunt.file.read(options.maninfest_reloader);
-          }else if( options.maninfest_reloader != "" ){
-            reloader = options.maninfest_reloader;
-          }
+          bar.tick();
         }
 
 
 //
         if( options.mode == "one_for_each" ){
           for( var page_url in pages ){
-            var page_assets = pages[page_url].assets;
             var html_file = pages[page_url].file;
 
-//
+// generate and write AppCache file
             var cache = [];
             for( var n in options.cache ){
               cache.push(options.cache[n]);
             }
-            for( var n in page_assets ){
-              cache.push(page_assets[n]);
+            for( var n in pages[page_url].assets ){
+              cache.push( pages[page_url].assets[n] );
             }
-
-// generate and write AppCache file
             var manifest_file = html_file.replace(/[.](htm|html)$/,options.appcache_extension);
             var manifest_content = generate_appcache_content(options.version,
-              cache,options.network,options.fallback);
+              cache,
+              options.network,
+              options.fallback);
             grunt.file.write(manifest_file, manifest_content);
 
             var html_content = grunt.file.read(html_file);
-// load appcache and manifest reloader within html content
+// inject manifest within html content
             var manifest_url = manifest_file.replace(options.target_path,"");
             manifest_url = manifest_url.substr(0,1)=="/"?manifest_url:"/"+manifest_url;
-            html_content = html_content.replace("<html",
-              "<html manifest=\""+manifest_url+"\"")
+            html_content = insert_manifest(manifest_url,html_content);
+// inject appcache reloader
+            html_content = insert_reloader(options.manifest_reloader,html_content);
 
-// insert appcache reloader
-            if( reloader != "" ){
-              html_content = html_content.replace(/<body([^>]+)?>/gi,
-                "<body$1><script type='text/javascript'>"+reloader+"</script>");
-            }
             grunt.file.write(html_file, html_content);
             bar.tick();
           }
@@ -275,38 +254,31 @@ module.exports = function(grunt) {
           var manifest_file = options.target_path+manifest_url;
 
           for( var page_url in pages ){
-            var page_assets = pages[page_url].assets;
             var html_file = pages[page_url].file;
 
-//
-            var cache = [];
-            for( var n in options.cache ){
-              cache.push(options.cache[n]);
-            }
-            for( var n in page_assets ){
-              var page_asset = page_assets[n];
-              if( assets[page_asset].ocurence_urls.length >= options.min_occurence_count ){
-                cache.push(page_asset);
-              }
-            }
-
             var html_content = grunt.file.read(html_file);
-// load appcache and manifest reloader within html content
-            html_content = html_content.replace("<html",
-              "<html manifest=\""+manifest_url+"\"");
-
-// insert appcache reloader
-            if( reloader != "" ){
-              html_content = html_content.replace(/<body([^>]+)?>/gi,
-                "<body$1><script type='text/javascript'>"+reloader+"</script>");
-            }
+// inject manifest within html content
+            html_content = insert_manifest(manifest_url,html_content);
+// inject appcache reloader
+            html_content = insert_reloader(options.manifest_reloader,html_content);
             grunt.file.write(html_file, html_content);
             bar.tick();
           }
 
 // generate and write AppCache file
+          var cache = [];
+          for( var n in options.cache ){
+            cache.push(options.cache[n]);
+          }
+          for( var asset_url in assets ){
+            if( assets[asset_url].ocurence_urls.length >= options.min_occurence_count ){
+              cache.push(asset_url);
+            }
+          }
           var manifest_content = generate_appcache_content(options.version,
-            cache,options.network,options.fallback);
+            cache,
+            options.network,
+            options.fallback);
           grunt.file.write(manifest_file, manifest_content);
         }
 
@@ -323,6 +295,23 @@ module.exports = function(grunt) {
 
 // helpers function
 // ---------
+  function insert_manifest(manifest_url,html_content){
+    html_content = html_content.replace("<html",
+      "<html manifest=\""+manifest_url+"\"");
+    return html_content;
+  }
+  function insert_reloader(reloader, html_content){
+    if( reloader ){
+      if( grunt.file.exists(reloader) ){
+        reloader = grunt.file.read(reloader);
+      }
+      if( reloader ){
+        html_content = html_content.replace(/<body([^>]+)?>/gi,
+          "<body$1><script type='text/javascript'>"+reloader+"</script>");
+      }
+    }
+    return html_content;
+  }
   function generate_appcache_content(version,cache,network,fallback){
     var content = "";
     content += "CACHE MANIFEST" + "\n"
