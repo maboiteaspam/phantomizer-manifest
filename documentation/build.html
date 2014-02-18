@@ -71,7 +71,6 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
         out_file:<span class="hljs-string">''</span>,
 
         meta_file:<span class="hljs-string">''</span>,
-        project_dir:<span class="hljs-string">'&lt;%= project_dir %&gt;'</span>,
 
         manifest_file:<span class="hljs-string">''</span>,
         manifest_meta:<span class="hljs-string">''</span>,
@@ -89,19 +88,19 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
       <span class="hljs-keyword">var</span> in_file = options.in_file;
       <span class="hljs-keyword">var</span> out_file = options.out_file;
       <span class="hljs-keyword">var</span> meta_file = options.meta_file;
-      <span class="hljs-keyword">var</span> project_dir = options.project_dir;
       <span class="hljs-keyword">var</span> base_url = options.base_url;
       <span class="hljs-keyword">var</span> manifest_file = options.manifest_file;
       <span class="hljs-keyword">var</span> manifest_meta = options.manifest_meta;
       <span class="hljs-keyword">var</span> manifest_url = options.manifest_url;
-      <span class="hljs-keyword">var</span> maninfest_reloader = options.manifest_reloader;
+      <span class="hljs-keyword">var</span> manifest_reloader = options.manifest_reloader;
       <span class="hljs-keyword">var</span> paths = options.src_paths;
       <span class="hljs-keyword">var</span> version = options.version;
       <span class="hljs-keyword">var</span> cache = options.cache;
       <span class="hljs-keyword">var</span> network = options.network;
       <span class="hljs-keyword">var</span> fallback = options.fallback;
 
-      <span class="hljs-keyword">var</span> phantomizer = ph_libutil.get(<span class="hljs-string">"main"</span>);
+      <span class="hljs-keyword">var</span> Phantomizer = ph_libutil.Phantomizer;
+      <span class="hljs-keyword">var</span> phantomizer = <span class="hljs-keyword">new</span> Phantomizer(process.cwd(),grunt);
       <span class="hljs-keyword">var</span> meta_manager = phantomizer.get_meta_manager();
 
       <span class="hljs-keyword">var</span> current_grunt_task  = <span class="hljs-keyword">this</span>.nameArgs;
@@ -156,7 +155,7 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
         <p>include appcache and manifest reloader within html content</p>
 
         
-          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> reloader = grunt.file.read(maninfest_reloader);
+          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> reloader = grunt.file.read(manifest_reloader);
         html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>, <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>)
         html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>, <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>)
         grunt.file.write(out_file, html_content);
@@ -167,11 +166,7 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
         <p>create AppCache meta</p>
 
         
-          <div class='highlight'><pre>        appcache_entry.load_dependencies([
-          process.cwd()+<span class="hljs-string">"/Gruntfile.js"</span>,
-          project_dir+<span class="hljs-string">"/../config.json"</span>,
-          __filename,
-          in_file])
+          <div class='highlight'><pre>        appcache_entry.load_dependencies([ __filename, in_file])
         appcache_entry.require_task(current_grunt_task, current_grunt_opt)
         appcache_entry.save(manifest_meta)</pre></div>
         
@@ -231,7 +226,8 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
 
       <span class="hljs-keyword">var</span> done = <span class="hljs-keyword">this</span>.async();
 
-      <span class="hljs-keyword">var</span> phantomizer = ph_libutil.get(<span class="hljs-string">"main"</span>);
+      <span class="hljs-keyword">var</span> Phantomizer = ph_libutil.Phantomizer;
+      <span class="hljs-keyword">var</span> phantomizer = <span class="hljs-keyword">new</span> Phantomizer(process.cwd(),grunt);
       <span class="hljs-keyword">var</span> router = phantomizer.get_router();
 
       router.load(<span class="hljs-function"><span class="hljs-keyword">function</span><span class="hljs-params">()</span>{</span></pre></div>
@@ -249,7 +245,11 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
           }
           <span class="hljs-keyword">return</span> <span class="hljs-literal">true</span>;
         });
-        grunt.log.ok(<span class="hljs-string">"URL to export: "</span>+urls.length+<span class="hljs-string">"/"</span>+(urls.length+not_added.length));</pre></div>
+        grunt.log.ok(<span class="hljs-string">"URL to inject: "</span>+urls.length+<span class="hljs-string">"/"</span>+(urls.length+not_added.length));
+
+        <span class="hljs-keyword">var</span> files = grunt.file.expand(
+          {cwd:options.target_path},
+          [<span class="hljs-string">'**/*.html'</span>,<span class="hljs-string">'**/*.htm'</span>,<span class="hljs-string">'!js/**'</span>,<span class="hljs-string">'!css/**'</span>,]);</pre></div>
         
       
         
@@ -260,51 +260,35 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
           complete: <span class="hljs-string">'#'</span>
           , incomplete: <span class="hljs-string">'-'</span>
           , width: <span class="hljs-number">80</span>
-          , total: (urls.length*<span class="hljs-number">2</span>)
-        });</pre></div>
-        
-      
-        
-        
-        
-          <div class='highlight'><pre>        <span class="hljs-keyword">var</span> pages = {};
-        <span class="hljs-keyword">var</span> assets = {};
-        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> urls ){
-          <span class="hljs-keyword">var</span> url = urls[n];
-          <span class="hljs-keyword">var</span> in_file = options.target_path + url;
-          <span class="hljs-keyword">if</span>( grunt.file.exists( in_file ) ){
-            <span class="hljs-keyword">var</span> html_content = grunt.file.read(in_file);
-            <span class="hljs-keyword">var</span> page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
-            <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> t <span class="hljs-keyword">in</span> page_assets ){
-              <span class="hljs-keyword">var</span> page_asset = page_assets[t];
-              <span class="hljs-keyword">if</span>( !assets[page_asset] ){
-                assets[page_asset] = {
-                  ocurence_count:<span class="hljs-number">0</span>,
-                  ocurence_urls:[]
-                }
-              }
-              assets[page_asset].ocurence_count++;
-              assets[page_asset].ocurence_urls.push(url);
-            }
+          , total: (urls.length+files.length)
+        });
 
+        <span class="hljs-keyword">var</span> pages = {};
+        <span class="hljs-keyword">var</span> assets = {};
+        <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> files ){
+          <span class="hljs-keyword">var</span> url = <span class="hljs-string">"/"</span>+files[n];
+          <span class="hljs-keyword">var</span> in_file = options.target_path + files[n];
+          <span class="hljs-keyword">var</span> html_content = grunt.file.read(in_file);
+          <span class="hljs-keyword">var</span> page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
+          <span class="hljs-keyword">for</span>(<span class="hljs-keyword">var</span> t <span class="hljs-keyword">in</span> page_assets ){
+            <span class="hljs-keyword">var</span> page_asset = page_assets[t];
+            <span class="hljs-keyword">if</span>( !assets[page_asset] ){
+              assets[page_asset] = {
+                ocurence_count:<span class="hljs-number">0</span>,
+                ocurence_urls:[]
+              }
+            }
+            assets[page_asset].ocurence_count++;
+            assets[page_asset].ocurence_urls.push(url);
+          }
+
+          <span class="hljs-keyword">if</span>( router.match(url) ){
             pages[url] = {
               file:in_file,
               assets:page_assets
             };
-
-            bar.tick();
           }
-        }
-
-
-
-        <span class="hljs-keyword">var</span> reloader = <span class="hljs-string">""</span>;
-        <span class="hljs-keyword">if</span>( options.maninfest_reloader ){
-          <span class="hljs-keyword">if</span>( grunt.file.exists(options.maninfest_reloader) ){
-            reloader = grunt.file.read(options.maninfest_reloader);
-          }<span class="hljs-keyword">else</span> <span class="hljs-keyword">if</span>( options.maninfest_reloader != <span class="hljs-string">""</span> ){
-            reloader = options.maninfest_reloader;
-          }
+          bar.tick();
         }</pre></div>
         
       
@@ -313,52 +297,45 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
         
           <div class='highlight'><pre>        <span class="hljs-keyword">if</span>( options.mode == <span class="hljs-string">"one_for_each"</span> ){
           <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> page_url <span class="hljs-keyword">in</span> pages ){
-            <span class="hljs-keyword">var</span> page_assets = pages[page_url].assets;
             <span class="hljs-keyword">var</span> html_file = pages[page_url].file;</pre></div>
-        
-      
-        
-        
-        
-          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> cache = [];
-            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> options.cache ){
-              cache.push(options.cache[n]);
-            }
-            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> page_assets ){
-              cache.push(page_assets[n]);
-            }</pre></div>
         
       
         
         <p>generate and write AppCache file</p>
 
         
-          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> manifest_file = html_file.replace(<span class="hljs-regexp">/[.](htm|html)$/</span>,options.appcache_extension);
+          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> cache = [];
+            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> options.cache ){
+              cache.push(options.cache[n]);
+            }
+            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> pages[page_url].assets ){
+              cache.push( pages[page_url].assets[n] );
+            }
+            <span class="hljs-keyword">var</span> manifest_file = html_file.replace(<span class="hljs-regexp">/[.](htm|html)$/</span>,options.appcache_extension);
             <span class="hljs-keyword">var</span> manifest_content = generate_appcache_content(options.version,
-              cache,options.network,options.fallback);
+              cache,
+              options.network,
+              options.fallback);
             grunt.file.write(manifest_file, manifest_content);
 
             <span class="hljs-keyword">var</span> html_content = grunt.file.read(html_file);</pre></div>
         
       
         
-        <p>load appcache and manifest reloader within html content</p>
+        <p>inject manifest within html content</p>
 
         
           <div class='highlight'><pre>            <span class="hljs-keyword">var</span> manifest_url = manifest_file.replace(options.target_path,<span class="hljs-string">""</span>);
             manifest_url = manifest_url.substr(<span class="hljs-number">0</span>,<span class="hljs-number">1</span>)==<span class="hljs-string">"/"</span>?manifest_url:<span class="hljs-string">"/"</span>+manifest_url;
-            html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>,
-              <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>)</pre></div>
+            html_content = insert_manifest(manifest_url,html_content);</pre></div>
         
       
         
-        <p>insert appcache reloader</p>
+        <p>inject appcache reloader</p>
 
         
-          <div class='highlight'><pre>            <span class="hljs-keyword">if</span>( reloader != <span class="hljs-string">""</span> ){
-              html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>,
-                <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>);
-            }
+          <div class='highlight'><pre>            html_content = insert_reloader(options.manifest_reloader,html_content);
+
             grunt.file.write(html_file, html_content);
             bar.tick();
           }
@@ -374,43 +351,23 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
           <span class="hljs-keyword">var</span> manifest_file = options.target_path+manifest_url;
 
           <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> page_url <span class="hljs-keyword">in</span> pages ){
-            <span class="hljs-keyword">var</span> page_assets = pages[page_url].assets;
-            <span class="hljs-keyword">var</span> html_file = pages[page_url].file;</pre></div>
-        
-      
-        
-        
-        
-          <div class='highlight'><pre>            <span class="hljs-keyword">var</span> cache = [];
-            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> options.cache ){
-              cache.push(options.cache[n]);
-            }
-            <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> page_assets ){
-              <span class="hljs-keyword">var</span> page_asset = page_assets[n];
-              <span class="hljs-keyword">if</span>( assets[page_asset].ocurence_urls.length &gt;= options.min_occurence_count ){
-                cache.push(page_asset);
-              }
-            }
+            <span class="hljs-keyword">var</span> html_file = pages[page_url].file;
 
             <span class="hljs-keyword">var</span> html_content = grunt.file.read(html_file);</pre></div>
         
       
         
-        <p>load appcache and manifest reloader within html content</p>
+        <p>inject manifest within html content</p>
 
         
-          <div class='highlight'><pre>            html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>,
-              <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>);</pre></div>
+          <div class='highlight'><pre>            html_content = insert_manifest(manifest_url,html_content);</pre></div>
         
       
         
-        <p>insert appcache reloader</p>
+        <p>inject appcache reloader</p>
 
         
-          <div class='highlight'><pre>            <span class="hljs-keyword">if</span>( reloader != <span class="hljs-string">""</span> ){
-              html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>,
-                <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>);
-            }
+          <div class='highlight'><pre>            html_content = insert_reloader(options.manifest_reloader,html_content);
             grunt.file.write(html_file, html_content);
             bar.tick();
           }</pre></div>
@@ -420,8 +377,19 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
         <p>generate and write AppCache file</p>
 
         
-          <div class='highlight'><pre>          <span class="hljs-keyword">var</span> manifest_content = generate_appcache_content(options.version,
-            cache,options.network,options.fallback);
+          <div class='highlight'><pre>          <span class="hljs-keyword">var</span> cache = [];
+          <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> n <span class="hljs-keyword">in</span> options.cache ){
+            cache.push(options.cache[n]);
+          }
+          <span class="hljs-keyword">for</span>( <span class="hljs-keyword">var</span> asset_url <span class="hljs-keyword">in</span> assets ){
+            <span class="hljs-keyword">if</span>( assets[asset_url].ocurence_urls.length &gt;= options.min_occurence_count ){
+              cache.push(asset_url);
+            }
+          }
+          <span class="hljs-keyword">var</span> manifest_content = generate_appcache_content(options.version,
+            cache,
+            options.network,
+            options.fallback);
           grunt.file.write(manifest_file, manifest_content);
         }
 
@@ -441,7 +409,24 @@ module.exports = <span class="hljs-function"><span class="hljs-keyword">function
         
         
         
-          <div class='highlight'><pre>  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">generate_appcache_content</span><span class="hljs-params">(version,cache,network,fallback)</span>{</span>
+          <div class='highlight'><pre>  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">insert_manifest</span><span class="hljs-params">(manifest_url,html_content)</span>{</span>
+    html_content = html_content.replace(<span class="hljs-string">"&lt;html"</span>,
+      <span class="hljs-string">"&lt;html manifest=\""</span>+manifest_url+<span class="hljs-string">"\""</span>);
+    <span class="hljs-keyword">return</span> html_content;
+  }
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">insert_reloader</span><span class="hljs-params">(reloader, html_content)</span>{</span>
+    <span class="hljs-keyword">if</span>( reloader ){
+      <span class="hljs-keyword">if</span>( grunt.file.exists(reloader) ){
+        reloader = grunt.file.read(reloader);
+      }
+      <span class="hljs-keyword">if</span>( reloader ){
+        html_content = html_content.replace(<span class="hljs-regexp">/&lt;body([^&gt;]+)?&gt;/gi</span>,
+          <span class="hljs-string">"&lt;body$1&gt;&lt;script type='text/javascript'&gt;"</span>+reloader+<span class="hljs-string">"&lt;/script&gt;"</span>);
+      }
+    }
+    <span class="hljs-keyword">return</span> html_content;
+  }
+  <span class="hljs-function"><span class="hljs-keyword">function</span> <span class="hljs-title">generate_appcache_content</span><span class="hljs-params">(version,cache,network,fallback)</span>{</span>
     <span class="hljs-keyword">var</span> content = <span class="hljs-string">""</span>;
     content += <span class="hljs-string">"CACHE MANIFEST"</span> + <span class="hljs-string">"\n"</span>
     content += <span class="hljs-string">"# version::"</span> + version + <span class="hljs-string">"\n"</span>
