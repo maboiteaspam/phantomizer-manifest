@@ -153,6 +153,7 @@ module.exports = function(grunt) {
         network:[],
         fallback:[]
       });
+      grunt.verbose.writeflags(options);
 
       var done = this.async();
 
@@ -172,6 +173,7 @@ module.exports = function(grunt) {
           return true;
         });
         grunt.log.ok("URL to inject: "+urls.length+"/"+(urls.length+not_added.length));
+        grunt.verbose.writeflags(urls);
 
         var files = grunt.file.expand(
           {cwd:options.target_path},
@@ -212,6 +214,8 @@ module.exports = function(grunt) {
           }
           bar.tick();
         }
+        grunt.verbose.writeflags(pages);
+        grunt.verbose.writeflags(assets);
 
 
 //
@@ -227,6 +231,7 @@ module.exports = function(grunt) {
             for( var n in pages[page_url].assets ){
               cache.push( pages[page_url].assets[n] );
             }
+            grunt.verbose.writeflags(cache);
             var manifest_file = html_file.replace(/[.](htm|html)$/,options.appcache_extension);
             var manifest_content = generate_appcache_content(options.version,
               cache,
@@ -314,15 +319,15 @@ module.exports = function(grunt) {
   }
   function generate_appcache_content(version,cache,network,fallback){
     var content = "";
-    content += "CACHE MANIFEST" + "\n"
-    content += "# version::" + version + "\n"
-    content += "CACHE:" + "\n"
+    content += "CACHE MANIFEST" + "\n";
+    content += "# version::" + version + "\n";
+    content += "CACHE:" + "\n";
     for( var n in cache )
-      content += cache[n]+ "\n"
-    content += "NETWORK:" + "\n"
+      content += cache[n]+ "\n";
+    content += "NETWORK:" + "\n";
     for( var n in network )
-      content += network[n]+ "\n"
-    content += "FALLBACK:" + "\n"
+      content += network[n]+ "\n";
+    content += "FALLBACK:" + "\n";
     for( var n in fallback )
       content += fallback[n].ok+ " "+fallback[n].ko + "\n";
 
