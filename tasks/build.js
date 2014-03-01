@@ -193,6 +193,7 @@ module.exports = function(grunt) {
           var url = "/"+files[n];
           var in_file = options.target_path + files[n];
           var html_content = grunt.file.read(in_file);
+          html_content = insert_reloader(options.manifest_reloader,html_content);
           var page_assets = lookup_for_assets(html_content, options.base_url, options.target_path);
           for(var t in page_assets ){
             var page_asset = page_assets[t];
@@ -307,12 +308,16 @@ module.exports = function(grunt) {
   }
   function insert_reloader(reloader, html_content){
     if( reloader ){
+      var isJS = reloader.match(/[.]js$/)
       if( grunt.file.exists(reloader) ){
         reloader = grunt.file.read(reloader);
       }
       if( reloader ){
+        if( isJS ){
+          reloader = "<script type='text/javascript'>"+reloader+"</script>";
+        }
         html_content = html_content.replace(/<body([^>]+)?>/gi,
-          "<body$1><script type='text/javascript'>"+reloader+"</script>");
+          "<body$1>"+reloader+"");
       }
     }
     return html_content;
