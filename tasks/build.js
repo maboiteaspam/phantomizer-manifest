@@ -360,8 +360,13 @@ module.exports = function(grunt) {
 // look up for <link> nodes
     var nodes = html_utils.find_link_nodes(html_content, base_url)
     for( var n in nodes ){
-      if( find_in_paths(paths,nodes[n].asrc) ){
-        retour.push(nodes[n].asrc)
+      var fp = find_in_paths(paths,nodes[n].asrc);
+      if( fp ){
+        retour.push(nodes[n].asrc);
+        var bg = html_utils.find_img_rules( grunt.file.read(fp), path.dirname(nodes[n].asrc)+"/" );
+        for( var t in bg ){
+          retour.push(bg[t].asrc);
+        }
       }
     }
 
@@ -370,13 +375,18 @@ module.exports = function(grunt) {
     for( var n in nodes ){
       var node = nodes[n]
       for( var k in node.imports ){
-        if( find_in_paths(paths,node.imports[k].asrc) ){
-          retour.push(node.imports[k].asrc)
+        var fp = find_in_paths(paths,node.imports[k].asrc);
+        if( fp ){
+          retour.push(node.imports[k].asrc);
+          var bg = html_utils.find_img_rules( grunt.file.read(fp), path.dirname(nodes[n].asrc)+"/" );
+          for( var t in bg ){
+            retour.push(bg[t].asrc);
+          }
         }
       }
       for( var k in node.imgs ){
         if( find_in_paths(paths,node.imgs[k].asrc) ){
-          retour.push(node.imgs[k].asrc)
+          retour.push(node.imgs[k].asrc);
         }
       }
     }
@@ -386,7 +396,7 @@ module.exports = function(grunt) {
     nodes = html_utils.find_rjs_nodes(html_content, base_url)
     for( var n in nodes ){
       if( find_in_paths(paths,nodes[n].asrc) ){
-        retour.push(nodes[n].asrc)
+        retour.push(nodes[n].asrc);
       }s
     }
 
@@ -394,7 +404,7 @@ module.exports = function(grunt) {
     nodes = html_utils.find_scripts_nodes(html_content, base_url)
     for( var n in nodes ){
       if( find_in_paths(paths,nodes[n].asrc) ){
-        retour.push(nodes[n].asrc)
+        retour.push(nodes[n].asrc);
       }
     }
 
@@ -402,7 +412,7 @@ module.exports = function(grunt) {
     nodes = html_utils.find_img_nodes(html_content, base_url)
     for( var n in nodes ){
       if( find_in_paths(paths,nodes[n].asrc) ){
-        retour.push(nodes[n].asrc)
+        retour.push(nodes[n].asrc);
       }
     }
     return retour;
