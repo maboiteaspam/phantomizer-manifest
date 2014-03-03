@@ -227,10 +227,10 @@ module.exports = function(grunt) {
 // generate and write AppCache file
             var cache = [];
             for( var n in options.cache ){
-              cache.push(options.cache[n]);
+              if(cache.indexOf(options.cache[n])==-1) cache.push(options.cache[n]);
             }
             for( var n in pages[page_url].assets ){
-              cache.push( pages[page_url].assets[n] );
+              if(cache.indexOf(pages[page_url].assets[n])==-1) cache.push( pages[page_url].assets[n] );
             }
             grunt.verbose.writeflags(cache);
             var manifest_file = html_file.replace(/[.](htm|html)$/,options.appcache_extension);
@@ -274,11 +274,11 @@ module.exports = function(grunt) {
 // generate and write AppCache file
           var cache = [];
           for( var n in options.cache ){
-            cache.push(options.cache[n]);
+            if(cache.indexOf(options.cache[n])==-1) cache.push(options.cache[n]);
           }
           for( var asset_url in assets ){
             if( assets[asset_url].ocurence_urls.length >= options.min_occurence_count ){
-              cache.push(asset_url);
+              if(cache.indexOf(asset_url)==-1) cache.push(asset_url);
             }
           }
           var manifest_content = generate_appcache_content(options.version,
